@@ -18,12 +18,16 @@ nlon=size(travtp,3);
 nz=size(travtp,4);
 omega=fcnew*2*pi;
 P=Array(Float64,nlat,nlon);
+temp1=zeros(1,size(En,2));temp2=temp1;
   for i=1:nlon
     for j=1:nlat
-      delta=travtp[:,j,i]-travtp[1,j,i]-rlvt;
-      steer=complex(cos(delta*omega),sin(omega*delta));
-      temp=steer'*En;temp2=temp*temp';
-      P[j,i]=1.0/real(temp2[1,1]);
+      @inbounds  delta=(travtp[:,j,i]-travtp[1,j,i]-rlvt)';
+      #steer=complex(cos(delta*omega),sin(omega*delta));
+      #temp=steer'*En;temp2=temp*temp';
+      #P[j,i]=1.0/real(temp2[1,1]);
+      temp1=cos(delta*omega)*real(En)-sin(delta*omega)*imag(En);temp2=cos(delta*omega)*imag(En)+sin(delta*omega)*real(En);
+      Temp1=temp1*temp1';Temp2=temp2*temp2';
+      P[j,i]=1.0/(Temp1[1,1]*Temp2[1,1]);
     end
   end
   P=P/maximum(P);
@@ -39,8 +43,8 @@ function MUSIC_GRID(data,glat,glon,gz,grlvt,rcv,fc,fs,c1,c2,fileName)
   for i=1:nz
     for ii=1:nlon
       for iii=1:nlat
-        loc=[glat[iii],glon[ii],gz[i]];
-        travtp[:,iii,ii,i]=getTravt(loc,rcv,tttbl,tdist,tdep);
+       @inbounds loc=[glat[iii],glon[ii],gz[i]];
+       @inbounds travtp[:,iii,ii,i]=getTravt(loc,rcv,tttbl,tdist,tdep);
       end
     end
   end
@@ -50,8 +54,8 @@ function MUSIC_GRID(data,glat,glon,gz,grlvt,rcv,fc,fs,c1,c2,fileName)
   P=Array(Float64,nlat,nlon,nf);
   tic()
   for i=1:nf
-    (En,fcnew)=getNSS(data,fs,fc[i],c1,c2);
-     P[:,:,i]=GridSearch(travtp,rlvt,fcnew,En);
+    @inbounds (En,fcnew)=getNSS(data,fs,fc[i],c1,c2);
+    @inbounds P[:,:,i]=GridSearch(travtp,rlvt,fcnew,En);
   end
   toc();
   P=P/maximum(P);
@@ -115,9 +119,9 @@ function EigTaper(N,a)
   for j=1:N
     for i=1:N
       if i!=j
-        C[i,j]=sin(2*pi*freq*(i-j))/(pi*(i-j));
+       @inbounds C[i,j]=sin(2*pi*freq*(i-j))/(pi*(i-j));
       else
-        C[i,j]=2*freq;
+       @inbounds C[i,j]=2*freq;
       end
     end
   end
@@ -129,7 +133,7 @@ function EigTaper(N,a)
   eigenvector=Array(Float64,size(tempe));
   for i=1:length(index)
     for j=1:N
-      eigenvector[j,i]=-tempe[N+1-j,i];
+     @inbounds eigenvector[j,i]=-tempe[N+1-j,i];
     end
   end
   return eigenvector,lambda
@@ -151,7 +155,7 @@ function getNSS(data,fs,fc,c1,c2)
   data_taped=Array(Float64,npt,nsta,ntaper);
   for i=1:ntaper
     for j=1:nsta
-      data_taped[:,j,i]=data[:,j].*EV[:,i];
+     @inbounds data_taped[:,j,i]=data[:,j].*EV[:,i];
     end
   end
   
@@ -199,8 +203,8 @@ function MCMC(data,fs,fc,c1,c2,grlvt,strp,Niter,xstep,xbnds,rcv,fileName)
       lprop=opt(dprop,rlvt,fcnew,En);
       u=rand(1,1);
       if log(u[1,1]).<log(min(lprop./L_keep[i],1))
-        x_keep[:,i+1]=xprop;
-        L_keep[i+1]=lprop;
+      @inbounds  x_keep[:,i+1]=xprop;
+      @inbounds  L_keep[i+1]=lprop;
         ncount=ncount+1;
       end
     end
