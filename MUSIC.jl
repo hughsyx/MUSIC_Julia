@@ -18,16 +18,13 @@ nlon=size(travtp,3);
 nz=size(travtp,4);
 omega=fcnew*2*pi;
 P=Array(Float64,nlat,nlon);
-temp1=zeros(1,size(En,2));temp2=temp1;
+temp=zeros(1,size(En,2));
   for i=1:nlon
     for j=1:nlat
-      @inbounds  delta=(travtp[:,j,i]-travtp[1,j,i]-rlvt)';
-      #steer=complex(cos(delta*omega),sin(omega*delta));
-      #temp=steer'*En;temp2=temp*temp';
-      #P[j,i]=1.0/real(temp2[1,1]);
-      temp1=cos(delta*omega)*real(En)-sin(delta*omega)*imag(En);temp2=cos(delta*omega)*imag(En)+sin(delta*omega)*real(En);
-      Temp1=temp1*temp1';Temp2=temp2*temp2';
-      P[j,i]=1.0/(Temp1[1,1]*Temp2[1,1]);
+      @inbounds  delta=travtp[:,j,i]-travtp[1,j,i]-rlvt;
+      steer=complex(cos(delta*omega),sin(omega*delta));
+      temp=steer'*En;temp2=temp*temp';
+      P[j,i]=1.0/real(temp2[1,1]);
     end
   end
   P=P/maximum(P);
@@ -54,8 +51,8 @@ function MUSIC_GRID(data,glat,glon,gz,grlvt,rcv,fc,fs,c1,c2,fileName)
   P=Array(Float64,nlat,nlon,nf);
   tic()
   for i=1:nf
-    @inbounds (En,fcnew)=getNSS(data,fs,fc[i],c1,c2);
-    @inbounds P[:,:,i]=GridSearch(travtp,rlvt,fcnew,En);
+    (En,fcnew)=getNSS(data,fs,fc[i],c1,c2);
+    P[:,:,i]=GridSearch(travtp,rlvt,fcnew,En);
   end
   toc();
   P=P/maximum(P);
@@ -83,7 +80,7 @@ function getTravt(loc,rcv,tttbl,tdist,tdep)
     a=dep[i]-tdep;
     b=Array(Float64,size(a));
     for j=1:length(a)
-      b[j]=abs(a[j]);
+     @inbounds b[j]=abs(a[j]);
     end
     (minval,index1)=findmin(b,2);
     temp=minval[1]*1.0;index1=index1[1]*1;
@@ -96,7 +93,7 @@ function getTravt(loc,rcv,tttbl,tdist,tdep)
     a=dist[i]-tdist;
     b=Array(Float64,size(a));
     for j=1:length(a)
-      b[j]=abs(a[j]);
+     @inbounds b[j]=abs(a[j]);
     end
     (minval,index3)=findmin(b,1);
     temp=minval[1]*1.0;index3=index3[1]*1;
@@ -119,9 +116,9 @@ function EigTaper(N,a)
   for j=1:N
     for i=1:N
       if i!=j
-       @inbounds C[i,j]=sin(2*pi*freq*(i-j))/(pi*(i-j));
+       C[i,j]=sin(2*pi*freq*(i-j))/(pi*(i-j));
       else
-       @inbounds C[i,j]=2*freq;
+       C[i,j]=2*freq;
       end
     end
   end
